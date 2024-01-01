@@ -1,0 +1,226 @@
+---
+title: "Video_Game"
+author: "Hernan Gio Cortez"
+date: "4/10/2023"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+For this case study, I used the video game sales dataset from Kaggle to apply data exploration,  cleaning, analysis and visualization. During the process, I used R programming language to code and demostrate my  thought process working with this dataset.
+
+
+## Stage 1: Ask questions and identify tasks
+
+Business Tasks:
+
+* Exploration and analysis
+* Show the sales trend from 1980 to 2017
+* Identify the top performing region, genre, platform and publishers
+
+## Stage 2: Preparation
+
+* Data: [here](https://www.kaggle.com/datasets/gregorut/videogamesales)
+* License: [here](https://github.com/GregorUT/vgchartzScrape/blob/master/LICENSE)
+* Description: This dataset contains a list of video games with sales greater than 100,000 copies. 
+
+Fields include
+
+* Rank - Ranking of overall sales
+* Name - The games name
+* Platform - Platform of the games release (i.e. PC,PS4, etc.)
+* Year - Year of the game's release
+* Genre - Genre of the game
+* Publisher - Publisher of the game
+* NA_Sales - Sales in North America (in millions)
+* EU_Sales - Sales in Europe (in millions)
+* JP_Sales - Sales in Japan (in millions)
+* Other_Sales - Sales in the rest of the world (in millions)
+* Global_Sales - Total worldwide sales.
+
+## Stage 3: Process the Data
+
+### Loading the libraries and importing data
+This process is important in R programming language to be able to use the functions in these libraries.
+
+```{r libraries, message=FALSE, warning=FALSE}
+#install.packages("tidyverse")
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("data.table")
+library("tidyverse")
+library("ggplot2")
+library("dplyr")
+library("data.table")
+```
+
+```{r dataset}
+setwd("/Users/hernangio/Documents/Data Analyst/Portfolio/01 Data")
+video_games <- read.csv("vgsales.csv")
+```
+### Observing the data
+
+Check the class of the columns and visualize the top rows of the data using `head()` and `str()`.
+
+```{r explore}
+head(video_games)
+str(video_games)
+```
+
+### Cleaning
+
+Upon checking, I found out that the class of Year column is **character**. I changed the class of Year column using `as.numeric`.
+
+```{r warning=FALSE}
+video_games$Year <- as.numeric(video_games$Year)
+table(video_games[,4] == "N/A", useNA = "a")
+table(video_games[,6] == "N/A", useNA = "a")
+```
+
+Upon checking, I found out that there are **271 rows** without Year values and **58 rows** without Publisher. I excluded the rows without Year values and converted Publisher with NA values to "Unknown"
+
+```{r}
+video_games <- subset(video_games, is.na(Year) == FALSE)
+video_games$Publisher <- ifelse(video_games$Publisher == "N/A", NA, video_games$Publisher)
+video_games$Publisher <- ifelse(is.na(video_games$Publisher), "Unknown" , video_games$Publisher)
+```
+
+Check for NA values
+
+```{r}
+table(video_games$Year == "N/A", useNA = "a")
+table(video_games$Publisher == "N/A", useNA = "a")
+```
+
+Check if there are any duplicated rows
+
+```{r}
+nrow(video_games[duplicated(video_games),])
+```
+
+Check Year column
+
+```{r}
+sort(unique(video_games$Year))
+sum(ifelse(video_games$Year == 2020, 1,0))
+```
+I excluded **1 row** under year 2020 for the final dataset
+
+
+```{r}
+video_games <- subset(video_games, Year != 2020)
+```
+
+## Stage 4: Analysis and Visualization
+
+### Summary of the top performing video games (top 100)
+
+```{r}
+top_video_games <- video_games[1:100,]
+summary(top_video_games)
+```
+
+### Global Sales per Year
+
+```{r echo=FALSE, warning=FALSE}
+mindate <- min(video_games$Year)
+maxdate <- max(video_games$Year)
+
+ggplot(data=video_games, aes(x=Year, y=Global_Sales)) +
+  geom_bar(fill = "blue", stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(caption=paste0("Data from: ", mindate, " to ", maxdate),
+       x="Year",
+       y="Dollar ($M)")
+```
+
+### Genre
+
+```{r}
+salesxgenre <- video_games %>% 
+  select(Genre,NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>% 
+  group_by(Genre) %>% summarize(
+    NA_Sales_Total = sum(NA_Sales),
+    JP_Sales_Total = sum(JP_Sales),
+    Other_Sales_Total = sum(Other_Sales),
+    Global_Sales_Total = sum(Global_Sales)
+  ) %>% 
+  arrange(desc(Global_Sales_Total))
+colnames(salesxgenre) <- c("Genre", "NA_Sales", "EU_Sales", "JP_Sales", "Other_Sales", "Global_Sales")
+setDT(salesxgenre)
+salesxgenre
+```
+
+### Platform
+
+```{r}
+salesxplatform <- video_games %>% 
+  select(Platform,NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>% 
+  group_by(Platform) %>% summarize(
+    NA_Sales_Total = sum(NA_Sales),
+    JP_Sales_Total = sum(JP_Sales),
+    Other_Sales_Total = sum(Other_Sales),
+    Global_Sales_Total = sum(Global_Sales)
+  ) %>% 
+  arrange(desc(Global_Sales_Total))
+
+colnames(salesxplatform) <- c("Platform", "NA_Sales", "EU_Sales", "JP_Sales", "Other_Sales", "Global_Sales")
+setDT(salesxplatform)
+salesxplatform
+```
+
+### Publisher
+
+```{r}
+salesxpublisher <- video_games %>% 
+  select(Publisher,NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>% 
+  group_by(Publisher) %>% summarize(
+    NA_Sales_Total = sum(NA_Sales),
+    JP_Sales_Total = sum(JP_Sales),
+    Other_Sales_Total = sum(Other_Sales),
+    Global_Sales_Total = sum(Global_Sales)
+  ) %>% 
+  arrange(desc(Global_Sales_Total))
+
+colnames(salesxpublisher) <- c("Publisher", "NA_Sales", "EU_Sales", "JP_Sales", "Other_Sales", "Global_Sales")
+setDT(salesxpublisher)
+salesxpublisher
+```
+
+### Global Sales by Genre and Publisher
+
+```{r}
+genrexpublisher <- video_games %>% 
+  select(Genre, Publisher, Global_Sales)
+
+genrexpublisher <- subset(genrexpublisher, Publisher %in% c("Nintendo", "Electronic Arts", "Activision", "Sony Computer Entertainment"))
+```
+
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(data=genrexpublisher, aes(x=Genre, y=Global_Sales, fill = Publisher)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(caption=paste0("Data from: ", mindate, " to ", maxdate),
+       x="Year",
+       y="Dollar ($M)")
+
+```
+
+The top 4 publishers were considered in this chart to visualize the video game sales distribution by genre in these publishers. 
+
+
+### Summary
+
+* The most profitable region is North America
+* Looking at the yearly global sales trend, we can see that sales increased from 1980 to 2008 and then sales slightly decreased starting year 2013
+* Most popular game genres are Action, Sports, Shooter and Role-Playing
+* On the other hand, PS2, X360, PS3 and Wii are the most popular Platform for the video games.
+* The most successful publishers are Nintendo, Electronic Arts, Activision and Sony Computer Entertainment
+
