@@ -1,6 +1,6 @@
 -----COVID 19 Data Exploration
 -----Data Source: https://ourworldindata.org/covid-deaths
------Date Rang: January 2020 - December 2023
+-----Date Range: January 2020 - December 2023
 
 -- Check if table is correctly imported
 SELECT *
